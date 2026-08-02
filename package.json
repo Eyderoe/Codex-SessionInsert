@@ -1,0 +1,47 @@
+{
+  "name": "codex-session-insert",
+  "displayName": "Codex Session Insert",
+  "description": "Insert [@file] or [@file#line-line] references into Codex with one shortcut",
+  "publisher": "eyderoe",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Eyderoe/Codex-SessionInsert"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:codexSessionInsert.insert"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexSessionInsert.insert",
+        "title": "插入Codex"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "codexSessionInsert.insert",
+          "when": "editorTextFocus",
+          "group": "9_cutcopypaste"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "typescript": "^5.0.0"
+  }
+}
