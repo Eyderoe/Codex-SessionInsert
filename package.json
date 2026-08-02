@@ -3,7 +3,7 @@
   "displayName": "Codex Session Insert",
   "description": "Insert [@file] or [@file#line-line] references into Codex with one shortcut",
   "publisher": "eyderoe",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/Eyderoe/Codex-SessionInsert"
@@ -32,6 +32,14 @@
           "when": "editorTextFocus",
           "group": "9_cutcopypaste"
         }
+      ],
+      "explorer/context": [
+        {
+          "command": "codexSessionInsert.insert",
+          "when": "resourceScheme == file",
+          "group": "9_cutcopypaste",
+          "multiSelect": true
+        }
       ]
     }
   },
@@ -42,6 +50,7 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.74.0",
+    "@vscode/vsce": "^3.9.2",
     "typescript": "^5.0.0"
   }
 }
