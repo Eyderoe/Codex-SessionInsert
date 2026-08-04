@@ -3,7 +3,7 @@
   "displayName": "Codex Session Insert",
   "description": "Insert [@file] or [@file#line-line] references into Codex with one shortcut",
   "publisher": "eyderoe",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "repository": {
     "type": "git",
     "url": "https://github.com/Eyderoe/Codex-SessionInsert"
@@ -19,6 +19,29 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Codex Session Insert",
+      "properties": {
+        "codexSessionInsert.copyToClipboard": {
+          "type": "boolean",
+          "default": false,
+          "description": "插入 Codex 时是否同时复制引用到剪贴板"
+        },
+        "codexSessionInsert.multiFileStyle": {
+          "type": "string",
+          "enum": [
+            "comma",
+            "separate"
+          ],
+          "enumDescriptions": [
+            "[@file1, @file2]",
+            "[@file1][@file2]"
+          ],
+          "default": "comma",
+          "description": "多选文件引用样式"
+        }
+      }
+    },
     "commands": [
       {
         "command": "codexSessionInsert.insert",

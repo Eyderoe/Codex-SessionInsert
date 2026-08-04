@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 const CODEX_DEFAULT_FOCUS_COMMANDS = ['codex.chat.focusInput', 'chatgpt.openSidebar'];
 const CODEX_DEFAULT_PASTE_COMMAND = 'editor.action.clipboardPasteAction';
 const DEFAULT_FOCUS_DELAY_MS = 80;
+const RESTORE_CLIPBOARD_DELAY_MS = 150;
 
 async function executeFirstAvailableCommand(commandIds: string[]): Promise<boolean> {
   const commands = await vscode.commands.getCommands(true);
@@ -43,6 +44,20 @@ function buildReference(relativePath: string, selection: vscode.Selection): stri
   return `[@${relativePath}#${startLine}-${endLine}]`;
 }
 
+function buildMultiFileReference(relativePaths: string[]): string {
+  const style = vscode.workspace
+    .getConfiguration('codexSessionInsert')
+    .get<'comma' | 'separate'>('multiFileStyle', 'comma');
+
+  if (style === 'separate') {
+    // [@file1][@file2]
+    return relativePaths.map((relativePath) => `[@${relativePath}]`).join('');
+  }
+
+  // [@file1, @file2]（默认）
+  return `[${relativePaths.map((relativePath) => `@${relativePath}`).join(', ')}]`;
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const disposable = vscode.commands.registerCommand(
     'codexSessionInsert.insert',
@@ -60,11 +75,10 @@ export function activate(context: vscode.ExtensionContext): void {
           ? `[@${relativePath}]`
           : buildReference(relativePath, editor.selection);
       } else if (selectedUris && selectedUris.length > 0) {
-        // 资源管理器多选：为每个选中的文件/文件夹生成引用，逗号分隔
-        const paths = selectedUris.map(
-          (selectedUri) => `@${vscode.workspace.asRelativePath(selectedUri, false)}`
+        // 资源管理器多选：按设置的多文件样式生成引用
+        reference = buildMultiFileReference(
+          selectedUris.map((selectedUri) => vscode.workspace.asRelativePath(selectedUri, false))
         );
-        reference = `[${paths.join(', ')}]`;
       } else if (uri) {
         // 资源管理器单选：引用整个文件/文件夹
         reference = `[@${vscode.workspace.asRelativePath(uri, false)}]`;
@@ -76,6 +90,20 @@ export function activate(context: vscode.ExtensionContext): void {
       } else {
         vscode.window.showWarningMessage('Codex Session Insert: Please open a file first');
         return;
+      }
+
+      const copyToClipboard = vscode.workspace
+        .getConfiguration('codexSessionInsert')
+        .get<boolean>('copyToClipboard', false);
+
+      // 不复制到剪贴板时，先记住当前剪贴板内容，插入完成后恢复
+      let previousClipboard: string | undefined;
+      if (!copyToClipboard) {
+        try {
+          previousClipboard = await vscode.env.clipboard.readText();
+        } catch {
+          previousClipboard = undefined;
+        }
       }
 
       await vscode.env.clipboard.writeText(reference);
@@ -97,6 +125,12 @@ export function activate(context: vscode.ExtensionContext): void {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         vscode.window.showWarningMessage(`Codex Session Insert: Paste failed: ${message}`);
+      }
+
+      if (previousClipboard !== undefined) {
+        // 等 Codex 输入框完成粘贴后再恢复剪贴板，避免覆盖粘贴内容
+        await new Promise((resolve) => setTimeout(resolve, RESTORE_CLIPBOARD_DELAY_MS));
+        await vscode.env.clipboard.writeText(previousClipboard);
       }
     }
   );

@@ -14,7 +14,23 @@
 | 无选区 | `[@src/foo.ts]` |
 | 单行 | `[@src/foo.ts#10]` |
 | 多行 | `[@src/foo.ts#10-20]` |
-| 多文件 | `[@src/a.ts, @src/b.ts]` |
+| 多文件 | `[@src/a.ts, @src/b.ts]`（默认）或 `[@src/a.ts][@src/b.ts]` |
+
+## 设置
+
+多文件插入样式可通过设置 `codexSessionInsert.multiFileStyle` 切换（设置 UI 中为下拉框）：
+
+| 值 | 样式 |
+| --- | --- |
+| `comma`（默认） | `[@file1, @file2]` |
+| `separate` | `[@file1][@file2]` |
+
+是否在插入 Codex 的同时把引用复制到剪贴板，可通过 `codexSessionInsert.copyToClipboard` 控制：
+
+| 值 | 行为 |
+| --- | --- |
+| `false`（默认） | 只插入引用，不改变剪贴板内容 |
+| `true` | 插入引用，并同时复制到剪贴板 |
 
 ## 打包为 VSIX
 
