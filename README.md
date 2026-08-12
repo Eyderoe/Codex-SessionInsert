@@ -1,6 +1,6 @@
 # Codex Session Insert
 
-右键菜单一键将代码引用（`[@file]` 或 `[@file#line-line]`，路径相对工作区根）复制并粘贴到 Codex 对话输入框。行为固定，无设置项。
+右键菜单一键将代码引用复制并粘贴到 Codex 对话输入框。支持两种引用样式：标准风格（Codex 行号 Markdown 链接）与简化风格（`[@file]` / `[@file#行号]`），可通过设置切换。
 
 ## 使用
 
@@ -9,21 +9,23 @@
 
 ## 引用格式
 
-| 场景 | 示例 |
-| --- | --- |
-| 无选区 | `[@src/foo.ts]` |
-| 单行 | `[@src/foo.ts#10]` |
-| 多行 | `[@src/foo.ts#10-20]` |
-| 多文件 | `[@src/a.ts, @src/b.ts]`（默认）或 `[@src/a.ts][@src/b.ts]` |
+| 场景 | 标准风格（默认） | 简化风格 |
+| --- | --- | --- |
+| 无选区 | `[foo.ts](/abs/path/src/foo.ts)` | `[@src/foo.ts]` |
+| 单行 | `[foo.ts (line 10)](/abs/path/src/foo.ts:10)` | `[@src/foo.ts#10]` |
+| 多行 | `[foo.ts (line 10-20)](/abs/path/src/foo.ts:10-20)` | `[@src/foo.ts#10-20]` |
+| 多文件 | `[a.ts](/abs/a.ts), [b.ts](/abs/b.ts)` | `[@src/a.ts][@src/b.ts]` |
+
+标准风格标签使用文件名，链接目标为文件绝对路径，行号后缀与 Codex 渲染出的标准格式一致；简化风格路径相对工作区根。
 
 ## 设置
 
-多文件插入样式可通过设置 `codexSessionInsert.multiFileStyle` 切换（设置 UI 中为下拉框）：
+引用样式可通过设置 `codexSessionInsert.referenceStyle` 切换（设置 UI 中为下拉框）：
 
 | 值 | 样式 |
 | --- | --- |
-| `comma`（默认） | `[@file1, @file2]` |
-| `separate` | `[@file1][@file2]` |
+| `standard`（默认） | 标准风格：Markdown 链接 + 行号，多文件逗号分隔 |
+| `simplified` | 简化风格：`[@file]` / `[@file#行号]`，多文件固定 separate 样式 |
 
 是否在插入 Codex 的同时把引用复制到剪贴板，可通过 `codexSessionInsert.copyToClipboard` 控制：
 
@@ -40,7 +42,7 @@ npm run compile
 npx @vscode/vsce package
 ```
 
-生成 `codex-session-insert-0.1.2.vsix` 文件，在 VS Code 扩展面板中通过「… → 从 VSIX 安装…」即可安装。
+生成 `codex-session-insert-0.1.5.vsix` 文件，在 VS Code 扩展面板中通过「… → 从 VSIX 安装…」即可安装。
 
 ## License
 

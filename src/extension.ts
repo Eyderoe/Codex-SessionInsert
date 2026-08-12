@@ -5,6 +5,8 @@ const CODEX_DEFAULT_PASTE_COMMAND = 'editor.action.clipboardPasteAction';
 const DEFAULT_FOCUS_DELAY_MS = 80;
 const RESTORE_CLIPBOARD_DELAY_MS = 150;
 
+type ReferenceStyle = 'simplified' | 'standard';
+
 async function executeFirstAvailableCommand(commandIds: string[]): Promise<boolean> {
   const commands = await vscode.commands.getCommands(true);
   const command = commandIds.find((commandId) => commands.includes(commandId));
@@ -26,36 +28,71 @@ function selectionCoversWholeFile(editor: vscode.TextEditor): boolean {
   return selection.start.isEqual(fileStart) && selection.end.isEqual(fileEnd);
 }
 
-function buildReference(relativePath: string, selection: vscode.Selection): string {
+function fileBaseName(uri: vscode.Uri): string {
+  // uri.path 始终使用 / 分隔，跨平台取最后一段作为文件名
+  const segments = uri.path.split('/').filter(Boolean);
+  return segments[segments.length - 1] ?? uri.fsPath;
+}
+
+function linkTarget(uri: vscode.Uri, suffix = ''): string {
+  const target = `${uri.fsPath}${suffix}`;
+  // 路径含空格或括号时用尖括号包裹，保证 Markdown 链接可解析
+  return /[\s()]/.test(target) ? `<${target}>` : target;
+}
+
+function getReferenceStyle(): ReferenceStyle {
+  return vscode.workspace
+    .getConfiguration('codexSessionInsert')
+    .get<ReferenceStyle>('referenceStyle', 'standard');
+}
+
+function buildWholeFileReference(uri: vscode.Uri, style: ReferenceStyle): string {
+  if (style === 'simplified') {
+    // 简化风格：无选区引用整个文件 [@src/foo.ts]
+    return `[@${vscode.workspace.asRelativePath(uri, false)}]`;
+  }
+  // 标准风格：无选区引用整个文件 [foo.ts](/abs/path/src/foo.ts)
+  return `[${fileBaseName(uri)}](${linkTarget(uri)})`;
+}
+
+function buildReference(uri: vscode.Uri, selection: vscode.Selection, style: ReferenceStyle): string {
   if (selection.isEmpty) {
-    // 无选区：引用整个文件 [@src/foo.ts]
-    return `[@${relativePath}]`;
+    return buildWholeFileReference(uri, style);
   }
 
   const startLine = selection.start.line + 1;
   const endLine = selection.end.line + 1;
 
-  if (startLine === endLine) {
-    // 单行选区 [@src/foo.ts#10]
-    return `[@${relativePath}#${startLine}]`;
+  if (style === 'simplified') {
+    const relativePath = vscode.workspace.asRelativePath(uri, false);
+    if (startLine === endLine) {
+      // 简化风格单行选区 [@src/foo.ts#10]
+      return `[@${relativePath}#${startLine}]`;
+    }
+    // 简化风格多行选区 [@src/foo.ts#10-20]
+    return `[@${relativePath}#${startLine}-${endLine}]`;
   }
 
-  // 多行选区 [@src/foo.ts#10-20]
-  return `[@${relativePath}#${startLine}-${endLine}]`;
+  const label = fileBaseName(uri);
+  if (startLine === endLine) {
+    // 单行选区 [foo.ts (line 10)](/abs/path/src/foo.ts:10)
+    return `[${label} (line ${startLine})](${linkTarget(uri, `:${startLine}`)})`;
+  }
+
+  // 多行选区 [foo.ts (line 10-20)](/abs/path/src/foo.ts:10-20)
+  return `[${label} (line ${startLine}-${endLine})](${linkTarget(uri, `:${startLine}-${endLine}`)})`;
 }
 
-function buildMultiFileReference(relativePaths: string[]): string {
-  const style = vscode.workspace
-    .getConfiguration('codexSessionInsert')
-    .get<'comma' | 'separate'>('multiFileStyle', 'comma');
+function buildMultiFileReference(uris: vscode.Uri[], style: ReferenceStyle): string {
+  const references = uris.map((uri) => buildWholeFileReference(uri, style));
 
-  if (style === 'separate') {
-    // [@file1][@file2]
-    return relativePaths.map((relativePath) => `[@${relativePath}]`).join('');
+  if (style === 'simplified') {
+    // 简化风格多文件固定 separate 样式 [@a][@b]
+    return references.join('');
   }
 
-  // [@file1, @file2]（默认）
-  return `[${relativePaths.map((relativePath) => `@${relativePath}`).join(', ')}]`;
+  // 标准风格多文件逗号分隔 [a.ts](/abs/a.ts), [b.ts](/abs/b.ts)
+  return references.join(', ');
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -67,26 +104,23 @@ export function activate(context: vscode.ExtensionContext): void {
       const isFromEditorContext = !!editor && !!uri && editor.document.uri.toString() === uri.toString();
 
       let reference: string;
+      const referenceStyle = getReferenceStyle();
 
       if (isFromEditorContext) {
-        // 编辑器内：按选区生成引用
-        const relativePath = vscode.workspace.asRelativePath(editor.document.uri, false);
+        // 编辑器内：按选区和引用样式生成引用
         reference = selectionCoversWholeFile(editor)
-          ? `[@${relativePath}]`
-          : buildReference(relativePath, editor.selection);
+          ? buildWholeFileReference(uri, referenceStyle)
+          : buildReference(uri, editor.selection, referenceStyle);
       } else if (selectedUris && selectedUris.length > 0) {
-        // 资源管理器多选：按设置的多文件样式生成引用
-        reference = buildMultiFileReference(
-          selectedUris.map((selectedUri) => vscode.workspace.asRelativePath(selectedUri, false))
-        );
+        // 资源管理器多选：按引用样式生成多文件引用
+        reference = buildMultiFileReference(selectedUris, referenceStyle);
       } else if (uri) {
         // 资源管理器单选：引用整个文件/文件夹
-        reference = `[@${vscode.workspace.asRelativePath(uri, false)}]`;
+        reference = buildWholeFileReference(uri, referenceStyle);
       } else if (editor) {
-        const relativePath = vscode.workspace.asRelativePath(editor.document.uri, false);
         reference = selectionCoversWholeFile(editor)
-          ? `[@${relativePath}]`
-          : buildReference(relativePath, editor.selection);
+          ? buildWholeFileReference(editor.document.uri, referenceStyle)
+          : buildReference(editor.document.uri, editor.selection, referenceStyle);
       } else {
         vscode.window.showWarningMessage('Codex Session Insert: Please open a file first');
         return;
@@ -108,7 +142,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       await vscode.env.clipboard.writeText(reference);
 
-      // 聚焦 Codex 输入框并粘贴 [@file] / [@file#line-line]
+      // 聚焦 Codex 输入框并粘贴 [label (line N)](/abs/path:N) 格式引用
       const didFocus = await executeFirstAvailableCommand(CODEX_DEFAULT_FOCUS_COMMANDS);
 
       if (!didFocus) {
