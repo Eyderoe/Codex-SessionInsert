@@ -34,7 +34,7 @@
             "simplified"
           ],
           "enumDescriptions": [
-            "标准风格：Markdown 链接 [文件名 (line 行号)](/绝对路径:行号)，多文件逗号分隔",
+            "标准风格：Markdown 链接 [相对路径 (line 行号)](/绝对路径:行号)，多文件逗号分隔",
             "简化风格：0.1.3 格式 [@file] / [@file#行号]，多文件固定 separate 样式 [@a][@b]"
           ],
           "default": "standard",

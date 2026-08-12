@@ -11,12 +11,12 @@
 
 | 场景 | 标准风格（默认） | 简化风格 |
 | --- | --- | --- |
-| 无选区 | `[foo.ts](/abs/path/src/foo.ts)` | `[@src/foo.ts]` |
-| 单行 | `[foo.ts (line 10)](/abs/path/src/foo.ts:10)` | `[@src/foo.ts#10]` |
-| 多行 | `[foo.ts (line 10-20)](/abs/path/src/foo.ts:10-20)` | `[@src/foo.ts#10-20]` |
-| 多文件 | `[a.ts](/abs/a.ts), [b.ts](/abs/b.ts)` | `[@src/a.ts][@src/b.ts]` |
+| 无选区 | `[src/foo.ts](/abs/path/src/foo.ts)` | `[@src/foo.ts]` |
+| 单行 | `[src/foo.ts (line 10)](/abs/path/src/foo.ts:10)` | `[@src/foo.ts#10]` |
+| 多行 | `[src/foo.ts (line 10-20)](/abs/path/src/foo.ts:10-20)` | `[@src/foo.ts#10-20]` |
+| 多文件 | `[src/a.ts](/abs/a.ts), [src/b.ts](/abs/b.ts)` | `[@src/a.ts][@src/b.ts]` |
 
-标准风格标签使用文件名，链接目标为文件绝对路径，行号后缀与 Codex 渲染出的标准格式一致；简化风格路径相对工作区根。
+两种风格的标签/路径均相对工作区根（`workspace.asRelativePath`），链接目标为文件绝对路径，行号后缀与 Codex 渲染出的标准格式一致。
 
 ## 设置
 

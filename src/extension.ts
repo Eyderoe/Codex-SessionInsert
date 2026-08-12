@@ -28,12 +28,6 @@ function selectionCoversWholeFile(editor: vscode.TextEditor): boolean {
   return selection.start.isEqual(fileStart) && selection.end.isEqual(fileEnd);
 }
 
-function fileBaseName(uri: vscode.Uri): string {
-  // uri.path 始终使用 / 分隔，跨平台取最后一段作为文件名
-  const segments = uri.path.split('/').filter(Boolean);
-  return segments[segments.length - 1] ?? uri.fsPath;
-}
-
 function linkTarget(uri: vscode.Uri, suffix = ''): string {
   const target = `${uri.fsPath}${suffix}`;
   // 路径含空格或括号时用尖括号包裹，保证 Markdown 链接可解析
@@ -51,8 +45,8 @@ function buildWholeFileReference(uri: vscode.Uri, style: ReferenceStyle): string
     // 简化风格：无选区引用整个文件 [@src/foo.ts]
     return `[@${vscode.workspace.asRelativePath(uri, false)}]`;
   }
-  // 标准风格：无选区引用整个文件 [foo.ts](/abs/path/src/foo.ts)
-  return `[${fileBaseName(uri)}](${linkTarget(uri)})`;
+  // 标准风格：无选区引用整个文件 [src/foo.ts](/abs/path/src/foo.ts)
+  return `[${vscode.workspace.asRelativePath(uri, false)}](${linkTarget(uri)})`;
 }
 
 function buildReference(uri: vscode.Uri, selection: vscode.Selection, style: ReferenceStyle): string {
@@ -73,13 +67,13 @@ function buildReference(uri: vscode.Uri, selection: vscode.Selection, style: Ref
     return `[@${relativePath}#${startLine}-${endLine}]`;
   }
 
-  const label = fileBaseName(uri);
+  const label = vscode.workspace.asRelativePath(uri, false);
   if (startLine === endLine) {
-    // 单行选区 [foo.ts (line 10)](/abs/path/src/foo.ts:10)
+    // 单行选区 [src/foo.ts (line 10)](/abs/path/src/foo.ts:10)
     return `[${label} (line ${startLine})](${linkTarget(uri, `:${startLine}`)})`;
   }
 
-  // 多行选区 [foo.ts (line 10-20)](/abs/path/src/foo.ts:10-20)
+  // 多行选区 [src/foo.ts (line 10-20)](/abs/path/src/foo.ts:10-20)
   return `[${label} (line ${startLine}-${endLine})](${linkTarget(uri, `:${startLine}-${endLine}`)})`;
 }
 
